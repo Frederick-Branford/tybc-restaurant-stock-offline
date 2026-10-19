@@ -1,0 +1,11 @@
+apply  20261009091639 identity_foundation
+apply  20261009093315 inventory_master
+apply  20261009094200 stock_ledger
+apply  20261009102108 waste_and_stock_count
+apply  20261009130456 atomic_stock_out
+apply  20261009132504 harden_waste_stock_guard
+apply  20261009160031 purchasing_foundation
+apply  20261009160513 fix_purchasing_ordered_timestamp
+apply  20261009161012 atomic_purchase_receiving
+apply  20261010061943 user_management_guard
+migrations applied: 10

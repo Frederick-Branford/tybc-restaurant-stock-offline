@@ -1,0 +1,25 @@
+﻿{
+    "idleContainersMiB":  {
+                              "tybc-spike-gateway-1":  9,
+                              "tybc-spike-rest-1":  18.7,
+                              "tybc-spike-auth-1":  12.9,
+                              "tybc-spike-db-1":  96.5
+                          },
+    "ollamaIdleMB":  85,
+    "windowsUsedIdleMB":  13574,
+    "dockerVmIdleMB":  1717,
+    "totalRamMB":  15613,
+    "inference":  {
+                      "ok":  true,
+                      "seconds":  21.6,
+                      "ollamaPeakMB":  85,
+                      "windowsUsedPeakMB":  13723,
+                      "dockerVmPeakMB":  1756
+                  },
+    "loadedContainersMiB":  {
+                                "tybc-spike-gateway-1":  9.7,
+                                "tybc-spike-rest-1":  18.7,
+                                "tybc-spike-auth-1":  13,
+                                "tybc-spike-db-1":  74.4
+                            }
+}

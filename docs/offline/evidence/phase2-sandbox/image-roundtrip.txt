@@ -1,0 +1,6 @@
+Offline image round trip (sandbox, tybc-spike/node:22):
+  image id before save : sha256:1654a4e74843f7d25384eb1b79817709fb0894a9c0f5fd9ba9b10123c9dc55ff
+  docker save -> SHA-256 recorded in a lock file -> docker rmi (image absent)
+  Import-TomYum-OfflineImages.ps1 -> checksum ok -> docker load -> image id check
+  image id after load  : sha256:1654a4e74843f7d25384eb1b79817709fb0894a9c0f5fd9ba9b10123c9dc55ff  (match)
+  Tamper test: one appended line in an archive -> "Checksum mismatch for images/postgrest.tar" (import refused)

@@ -1,0 +1,47 @@
+exit 0 in 19s
+ Network tybc-spike_tybc_backend Creating
+ Network tybc-spike_tybc_backend Created
+ Container tybc-spike-db-1 Creating
+ Container tybc-spike-db-1 Created
+ Container tybc-spike-auth-1 Creating
+ Container tybc-spike-auth-1 Created
+ Container tybc-spike-migrate-1 Creating
+ Container tybc-spike-migrate-1 Created
+ Container tybc-spike-rest-1 Creating
+ Container tybc-spike-rest-1 Created
+ Container tybc-spike-gateway-1 Creating
+ Container tybc-spike-gateway-1 Created
+ Container tybc-spike-db-1 Starting
+ Container tybc-spike-db-1 Started
+ Container tybc-spike-db-1 Waiting
+ Container tybc-spike-db-1 Healthy
+ Container tybc-spike-auth-1 Starting
+ Container tybc-spike-auth-1 Started
+ Container tybc-spike-auth-1 Waiting
+ Container tybc-spike-auth-1 Healthy
+ Container tybc-spike-migrate-1 Starting
+ Container tybc-spike-migrate-1 Started
+ Container tybc-spike-migrate-1 Waiting
+ Container tybc-spike-migrate-1 Exited
+ Container tybc-spike-rest-1 Starting
+ Container tybc-spike-rest-1 Started
+ Container tybc-spike-auth-1 Waiting
+ Container tybc-spike-auth-1 Healthy
+ Container tybc-spike-gateway-1 Starting
+ Container tybc-spike-gateway-1 Started
+ Container tybc-spike-gateway-1 Waiting
+ Container tybc-spike-db-1 Waiting
+ Container tybc-spike-auth-1 Waiting
+ Container tybc-spike-migrate-1 Waiting
+ Container tybc-spike-rest-1 Waiting
+ Container tybc-spike-rest-1 Healthy
+ Container tybc-spike-auth-1 Healthy
+ Container tybc-spike-migrate-1 Exited
+ Container tybc-spike-db-1 Healthy
+ Container tybc-spike-gateway-1 Healthy
+---
+auth running Up 12 seconds (healthy)
+db running Up 18 seconds (healthy)
+gateway running Up 5 seconds (healthy)
+migrate exited Exited (0) 6 seconds ago
+rest running Up 6 seconds

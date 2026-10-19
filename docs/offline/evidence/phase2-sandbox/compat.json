@@ -1,0 +1,124 @@
+{
+  "suite": "tybc-phase2-compat",
+  "ranAt": "2026-10-19T14:16:06.939Z",
+  "summary": {
+    "PASS": 16,
+    "FAIL": 3
+  },
+  "results": [
+    {
+      "id": "C01",
+      "title": "Gateway: healthz 200, no/unknown apikey 401, unknown path 404, GoTrue health via gateway",
+      "status": "PASS",
+      "detail": "{\"healthz\":200,\"restNoKey\":401,\"restBadKey\":401,\"authNoKey\":401,\"unknown\":404,\"authHealth\":200,\"gotrueVersion\":\"v2.197.0\"}"
+    },
+    {
+      "id": "C02",
+      "title": "Public sign-up is disabled",
+      "status": "PASS",
+      "detail": "Signups not allowed for this instance"
+    },
+    {
+      "id": "C03",
+      "title": "Service role creates users (GoTrue admin API); handle_new_user creates STAFF profiles",
+      "status": "PASS",
+      "detail": "[\"STAFF\",\"STAFF\"]"
+    },
+    {
+      "id": "C04",
+      "title": "Bootstrap first OWNER by service role (profiles.role_id)",
+      "status": "PASS",
+      "detail": "user_has_permission(owner, users.manage)=true"
+    },
+    {
+      "id": "C05",
+      "title": "OWNER password sign-in through gateway; JWT carries sub/role/aud",
+      "status": "PASS",
+      "detail": "{\"role\":\"authenticated\",\"aud\":\"authenticated\",\"alg\":\"HS256\",\"hasSessionId\":true}"
+    },
+    {
+      "id": "C06",
+      "title": "auth.getClaims() (used by src/proxy.ts) verifies the HS256 session",
+      "status": "PASS",
+      "detail": "sub matches: true"
+    },
+    {
+      "id": "C07",
+      "title": "auth.uid() in RLS: OWNER sees all profiles; STAFF sees only own row",
+      "status": "PASS",
+      "detail": "owner=2 staff=1"
+    },
+    {
+      "id": "C08",
+      "title": "has_permission() resolves auth.uid() from the JWT (OWNER true / STAFF false for users.manage)",
+      "status": "PASS",
+      "detail": "{\"owner\":true,\"staff\":false,\"staffInventoryView\":true}"
+    },
+    {
+      "id": "C09",
+      "title": "Service role: create item (base-unit trigger), Stock In insert, record_stock_out RPC, balance view",
+      "status": "PASS",
+      "detail": "{\"baseUnitRows\":1,\"kgUnit\":\"ok\",\"balanceRow\":{\"item_id\":\"8490f01c-8f44-4eb2-9d65-6f52e89d2fc0\",\"sku\":\"SPIKE-6C0604\",\"name\":\"Spike chilli 6c0604\",\"category_id\":\"4c02b90b-520a-4dcf-9e78-b5c500f3dbf1\",\"base_unit_id\":\"c10c4e0a-248c-4818-9c70-29e3d160a856\",\"base_unit_code\":\"G\",\"base_unit_symbol\":\"g\",\"cur"
+    },
+    {
+      "id": "C10",
+      "title": "RLS: anon sees nothing; authenticated with inventory.view sees items; STAFF lacks purchase.view",
+      "status": "PASS",
+      "detail": "{\"anonItems\":\"42501\",\"ownerItems\":1,\"staffItems\":1,\"ownerSuppliers\":1,\"staffSuppliers\":0}"
+    },
+    {
+      "id": "C11",
+      "title": "Authenticated users cannot write the ledger directly; service role cannot UPDATE/DELETE it",
+      "status": "PASS",
+      "detail": "{\"authInsert\":\"42501\",\"srvUpdate\":\"42501\",\"srvDelete\":\"42501\"}"
+    },
+    {
+      "id": "C12",
+      "title": "Idempotency: replaying record_stock_out with the same key creates no second movement",
+      "status": "PASS",
+      "detail": "{\"replayError\":\"23505\",\"rows\":1}"
+    },
+    {
+      "id": "C13",
+      "title": "PostgREST rejects a JWT signed with the wrong secret (forged service_role)",
+      "status": "PASS",
+      "detail": "status 401"
+    },
+    {
+      "id": "C14",
+      "title": "PostgREST rejects an expired but correctly signed JWT",
+      "status": "PASS",
+      "detail": "status 401"
+    },
+    {
+      "id": "C15",
+      "title": "Refresh token rotation works; sign-out revokes the refresh token",
+      "status": "PASS",
+      "detail": "reuse after sign-out: Invalid Refresh Token: Refresh Token Not Found"
+    },
+    {
+      "id": "C16",
+      "title": "Admin password reset (PUT /admin/users/{id}): new password works, old one fails, wrong password rejected",
+      "status": "PASS",
+      "detail": "{\"old\":\"Invalid login credentials\",\"new\":\"ok\"}"
+    },
+    {
+      "id": "S1a",
+      "title": "Ollama /api/version via http://host.docker.internal:11434",
+      "status": "FAIL",
+      "detail": "fetch failed"
+    },
+    {
+      "id": "S1b",
+      "title": "Ollama /api/tags lists qwen3.5:4b",
+      "status": "FAIL",
+      "detail": "fetch failed"
+    },
+    {
+      "id": "S1c",
+      "title": "Small qwen3.5:4b inference via http://host.docker.internal:11434/api/generate",
+      "status": "FAIL",
+      "detail": "fetch failed"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+D01|PASS|anon:nologin, authenticated:nologin, authenticator:login, service_role:bypassrls nologin, supabase_admin:super bypassrls login, supabase_auth_admin:login
+D02|PASS|service_role BYPASSRLS, authenticator NOINHERIT member of anon/authenticated/service_role
+D03|PASS|postgres superuser=false (Supabase demotes postgres)
+D04|PASS|jwt,role,uid
+D05|PASS|auth.schema_migrations latest=20260831180000 count=82
+D06|PASS|repo migrations recorded=10 first=20261009091639 last=20261010061943
+D07|PASS|public tables=18 rls_enabled=18
+D08|PASS|policies=17
+D09|PASS|security definer functions=11 (distinct; Phase 0 reported 14) all with empty search_path=true [complete_stock_count,create_item_base_unit,create_stock_count,handle_new_user,has_permission,receive_purchase_order_item,record_stock_count_item,record_stock_out,record_waste,update_user_access,user_has_permission]
+D10|PASS|user triggers=31 enabled=31 incl on_auth_user_created=true
+psql:<stdin>:68: NOTICE:  D11|PASS|update rejected: Confirmed stock movements are immutable. Create a correction movement instead.; delete rejected: Confirmed stock movements are immutable. Create a correction movement instead.
+D12|PASS|duplicate idempotency keys=0
+D13|PASS|ledger grants: authenticated INSERT=false service_role INSERT=true service_role UPDATE=false
+D14|PASS|PostgreSQL 17.11 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0, 64-bit
+D15|PASS|server timezone=GMT encoding=UTF8

@@ -1,0 +1,48 @@
+ok    [healthy] P01 = PASS
+ok    [healthy] P02 = PASS
+ok    [healthy] P03 = PASS
+ok    [healthy] P04 = PASS
+ok    [healthy] P05 = PASS
+ok    [healthy] P06 = PASS
+ok    [healthy] P07 = PASS
+ok    [healthy] P08 = PASS
+ok    [healthy] P09 = PASS
+ok    [healthy] P10 = PASS
+ok    [healthy] P11 = PASS
+ok    [healthy] P12 = PASS
+ok    [healthy] P13 = PASS
+ok    [healthy] P14 = PASS
+ok    [healthy] P15 = PASS
+ok    [healthy] P16 = PASS
+ok    [healthy] P17 = PASS
+ok    [healthy] P18 = PASS
+ok    [healthy] exit code 0
+ok    [ollama exposed] P16 = FAIL
+ok    [ollama exposed] exit code 2
+ok    [bios off] P05 = FAIL
+ok    [features off] P07 = FAIL
+ok    [no docker] P08 = FAIL
+ok    [no docker] P09 = FAIL
+ok    [no docker] P10 = FAIL
+ok    [no docker] P11 = NOT CHECKED
+ok    [engine stopped] P09 = WARN
+ok    [engine stopped] P17 = PASS
+ok    [model missing] P15 = FAIL
+ok    [ollama stopped] P14 = WARN
+ok    [ollama stopped] P15 = NOT CHECKED
+ok    [ollama stopped] P16 = NOT CHECKED
+ok    [port 3000 taken] P12 = FAIL
+ok    [old launcher] P12 = WARN
+ok    [no listener API] P16 = NOT CHECKED
+ok    [no listener API] P12 = NOT CHECKED
+ok    [env exposed] P16 = FAIL
+ok    [env loopback] P16 = PASS
+ok    [low RAM] P03 = FAIL
+ok    [small disk] P04 = WARN
+ok    [ARM64] P02 = FAIL
+ok    [drift] P17 = FAIL
+ok    [uncapped] P11 = WARN
+ok    [sleep] P18 = WARN
+ok    [tag moved] P19 = FAIL
+
+SELF-TEST PASSED

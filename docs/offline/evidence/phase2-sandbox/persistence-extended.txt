@@ -1,0 +1,18 @@
+Persistence test with the app profile running (sandbox, Linux Docker Engine, external volume tybc_spike_db_data)
+digest = auth.users count / stock_movements count / items count / md5 of all movement rows
+
+baseline            7/4/2/184dc1eb7b5a46aec07c006325939398
+after stop/start    7/4/2/184dc1eb7b5a46aec07c006325939398  app ready 2s  PASS
+  volume after down: tybc_spike_db_data
+after down/up       7/4/2/184dc1eb7b5a46aec07c006325939398  app ready 2s  PASS
+  volume after down -v: tybc_spike_db_data
+after down -v/up    7/4/2/184dc1eb7b5a46aec07c006325939398  app ready 2s  PASS
+after SIGKILL db    7/4/2/184dc1eb7b5a46aec07c006325939398  app ready 1s  PASS
+  db log: "database system was not properly shut down; automatic recovery in progress" ... "redo done"
+
+Contrast (throwaway project, non-external named volume):
+  before down -v: tybc-contrast_contrastvol
+  after  down -v: (absent)  -> a normal named volume IS deleted by 'down -v'; the external one is not.
+
+Not tested here (and never to be run on the client): Docker Desktop "Clean / Purge data",
+"Reset to factory defaults" or uninstall - these delete Docker-managed volumes including external ones.

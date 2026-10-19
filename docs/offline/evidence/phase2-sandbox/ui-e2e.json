@@ -1,0 +1,122 @@
+[
+ {
+  "name": "login page",
+  "ok": true,
+  "ms": 614,
+  "d": "เข้าสู่ระบบ · TOM YUM BANG C"
+ },
+ {
+  "name": "sign in as synthetic OWNER",
+  "ok": true,
+  "ms": 870,
+  "d": "http://127.0.0.1:3100/dashboard"
+ },
+ {
+  "name": "auth cookie name",
+  "ok": true,
+  "ms": 11,
+  "d": [
+   "sb-gateway-auth-token"
+  ]
+ },
+ {
+  "name": "GET /dashboard",
+  "ok": true,
+  "ms": 1982,
+  "d": {
+   "status": 200,
+   "url": "/dashboard",
+   "hasSpikeItem": true
+  }
+ },
+ {
+  "name": "GET /inventory",
+  "ok": true,
+  "ms": 1864,
+  "d": {
+   "status": 200,
+   "url": "/inventory",
+   "hasSpikeItem": true
+  }
+ },
+ {
+  "name": "GET /movements",
+  "ok": true,
+  "ms": 1703,
+  "d": {
+   "status": 200,
+   "url": "/movements",
+   "hasSpikeItem": true
+  }
+ },
+ {
+  "name": "GET /stock-in",
+  "ok": true,
+  "ms": 1699,
+  "d": {
+   "status": 200,
+   "url": "/stock-in",
+   "hasSpikeItem": true
+  }
+ },
+ {
+  "name": "GET /stock-out",
+  "ok": true,
+  "ms": 1825,
+  "d": {
+   "status": 200,
+   "url": "/stock-out",
+   "hasSpikeItem": true
+  }
+ },
+ {
+  "name": "GET /waste",
+  "ok": true,
+  "ms": 1750,
+  "d": {
+   "status": 200,
+   "url": "/waste",
+   "hasSpikeItem": true
+  }
+ },
+ {
+  "name": "GET /stock-count",
+  "ok": true,
+  "ms": 1660,
+  "d": {
+   "status": 200,
+   "url": "/stock-count",
+   "hasSpikeItem": false
+  }
+ },
+ {
+  "name": "GET /purchase-orders",
+  "ok": true,
+  "ms": 1840,
+  "d": {
+   "status": 200,
+   "url": "/purchase-orders",
+   "hasSpikeItem": false
+  }
+ },
+ {
+  "name": "GET /suppliers",
+  "ok": true,
+  "ms": 1681,
+  "d": {
+   "status": 200,
+   "url": "/suppliers",
+   "hasSpikeItem": false
+  }
+ },
+ {
+  "name": "GET /reports",
+  "ok": true,
+  "ms": 1605,
+  "d": {
+   "status": 200,
+   "url": "/reports",
+   "hasSpikeItem": true
+  }
+ }
+]

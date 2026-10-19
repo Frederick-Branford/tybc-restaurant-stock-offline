@@ -1,0 +1,20 @@
+docker stats (cgroup v1, Linux Docker Engine) - substitute images, synthetic data
+
+Idle, after browser session:
+  app      81.0 MiB / 768 MiB limit
+  auth     14.0 MiB / 128 MiB
+  db       79.2 MiB / 1 GiB
+  gateway   3.4 MiB / 32 MiB
+  rest     16.4 MiB / 128 MiB
+
+Peak while a headless browser loaded /dashboard, /inventory, /movements, /reports, /purchase-orders x6 (30 loads):
+  app     107.6 MiB
+  auth     14.0 MiB
+  db       85.7 MiB
+  gateway   3.6 MiB
+  rest     16.6 MiB
+  total   227.4 MiB  (budget ceiling in the deployment plan: ~2.3 GiB)
+  page load (waitUntil=load): p50 215 ms, p95 331 ms, max 464 ms
+
+Fresh stack without app, 20 s idle (runner): db 49.5, auth 10.8, rest 11.8, gateway 2.9 MiB
+Cold first initialisation of an empty volume (db init + GoTrue migrations + 10 repo migrations): 13 s

@@ -1,0 +1,241 @@
+{
+  "ranAt": "2026-10-19T21:17:33.6596465+07:00",
+  "machine": "sandbox (Linux)",
+  "evidence": "(sandbox path omitted)",
+  "counts": {
+    "PASS": 33,
+    "WARN": 1,
+    "FAIL": 3,
+    "NOT TESTED": 1
+  },
+  "results": [
+    {
+      "id": "STACK",
+      "title": "db -> auth -> migrate -> rest -> gateway healthy",
+      "status": "PASS",
+      "detail": "19s; migrations applied: 10"
+    },
+    {
+      "id": "C01",
+      "title": "Gateway: healthz 200, no/unknown apikey 401, unknown path 404, GoTrue health via gateway",
+      "status": "PASS",
+      "detail": "{\"healthz\":200,\"restNoKey\":401,\"restBadKey\":401,\"authNoKey\":401,\"unknown\":404,\"authHealth\":200,\"gotrueVersion\":\"v2.197.0\"}"
+    },
+    {
+      "id": "C02",
+      "title": "Public sign-up is disabled",
+      "status": "PASS",
+      "detail": "Signups not allowed for this instance"
+    },
+    {
+      "id": "C03",
+      "title": "Service role creates users (GoTrue admin API); handle_new_user creates STAFF profiles",
+      "status": "PASS",
+      "detail": "[\"STAFF\",\"STAFF\"]"
+    },
+    {
+      "id": "C04",
+      "title": "Bootstrap first OWNER by service role (profiles.role_id)",
+      "status": "PASS",
+      "detail": "user_has_permission(owner, users.manage)=true"
+    },
+    {
+      "id": "C05",
+      "title": "OWNER password sign-in through gateway; JWT carries sub/role/aud",
+      "status": "PASS",
+      "detail": "{\"role\":\"authenticated\",\"aud\":\"authenticated\",\"alg\":\"HS256\",\"hasSessionId\":true}"
+    },
+    {
+      "id": "C06",
+      "title": "auth.getClaims() (used by src/proxy.ts) verifies the HS256 session",
+      "status": "PASS",
+      "detail": "sub matches: true"
+    },
+    {
+      "id": "C07",
+      "title": "auth.uid() in RLS: OWNER sees all profiles; STAFF sees only own row",
+      "status": "PASS",
+      "detail": "owner=2 staff=1"
+    },
+    {
+      "id": "C08",
+      "title": "has_permission() resolves auth.uid() from the JWT (OWNER true / STAFF false for users.manage)",
+      "status": "PASS",
+      "detail": "{\"owner\":true,\"staff\":false,\"staffInventoryView\":true}"
+    },
+    {
+      "id": "C09",
+      "title": "Service role: create item (base-unit trigger), Stock In insert, record_stock_out RPC, balance view",
+      "status": "PASS",
+      "detail": "{\"baseUnitRows\":1,\"kgUnit\":\"ok\",\"balanceRow\":{\"item_id\":\"8490f01c-8f44-4eb2-9d65-6f52e89d2fc0\",\"sku\":\"SPIKE-6C0604\",\"name\":\"Spike chilli 6c0604\",\"category_id\":\"4c02b90b-520a-4dcf-9e78-b5c500f3dbf1\",\"base_unit_id\":\"c10c4e0a-248c-4818-9c70-29e3d160a856\",\"base_unit_code\":\"G\",\"base_unit_symbol\":\"g\",\"cur"
+    },
+    {
+      "id": "C10",
+      "title": "RLS: anon sees nothing; authenticated with inventory.view sees items; STAFF lacks purchase.view",
+      "status": "PASS",
+      "detail": "{\"anonItems\":\"42501\",\"ownerItems\":1,\"staffItems\":1,\"ownerSuppliers\":1,\"staffSuppliers\":0}"
+    },
+    {
+      "id": "C11",
+      "title": "Authenticated users cannot write the ledger directly; service role cannot UPDATE/DELETE it",
+      "status": "PASS",
+      "detail": "{\"authInsert\":\"42501\",\"srvUpdate\":\"42501\",\"srvDelete\":\"42501\"}"
+    },
+    {
+      "id": "C12",
+      "title": "Idempotency: replaying record_stock_out with the same key creates no second movement",
+      "status": "PASS",
+      "detail": "{\"replayError\":\"23505\",\"rows\":1}"
+    },
+    {
+      "id": "C13",
+      "title": "PostgREST rejects a JWT signed with the wrong secret (forged service_role)",
+      "status": "PASS",
+      "detail": "status 401"
+    },
+    {
+      "id": "C14",
+      "title": "PostgREST rejects an expired but correctly signed JWT",
+      "status": "PASS",
+      "detail": "status 401"
+    },
+    {
+      "id": "C15",
+      "title": "Refresh token rotation works; sign-out revokes the refresh token",
+      "status": "PASS",
+      "detail": "reuse after sign-out: Invalid Refresh Token: Refresh Token Not Found"
+    },
+    {
+      "id": "C16",
+      "title": "Admin password reset (PUT /admin/users/{id}): new password works, old one fails, wrong password rejected",
+      "status": "PASS",
+      "detail": "{\"old\":\"Invalid login credentials\",\"new\":\"ok\"}"
+    },
+    {
+      "id": "S1a",
+      "title": "Ollama /api/version via http://host.docker.internal:11434",
+      "status": "FAIL",
+      "detail": "fetch failed"
+    },
+    {
+      "id": "S1b",
+      "title": "Ollama /api/tags lists qwen3.5:4b",
+      "status": "FAIL",
+      "detail": "fetch failed"
+    },
+    {
+      "id": "S1c",
+      "title": "Small qwen3.5:4b inference via http://host.docker.internal:11434/api/generate",
+      "status": "FAIL",
+      "detail": "fetch failed"
+    },
+    {
+      "id": "D01",
+      "title": "database check",
+      "status": "PASS",
+      "detail": "anon:nologin, authenticated:nologin, authenticator:login, service_role:bypassrls nologin, supabase_admin:super bypassrls login, supabase_auth_admin:login"
+    },
+    {
+      "id": "D02",
+      "title": "database check",
+      "status": "PASS",
+      "detail": "service_role BYPASSRLS, authenticator NOINHERIT member of anon/authenticated/service_role"
+    },
+    {
+      "id": "D03",
+      "title": "database check",
+      "status": "PASS",
+      "detail": "postgres superuser=false (Supabase demotes postgres)"
+    },
+    {
+      "id": "D04",
+      "title": "database check",
+      "status": "PASS",
+      "detail": "jwt,role,uid"
+    },
+    {
+      "id": "D05",
+      "title": "database check",
+      "status": "PASS",
+      "detail": "auth.schema_migrations latest=20260831180000 count=82"
+    },
+    {
+      "id": "D06",
+      "title": "database check",
+      "status": "PASS",
+      "detail": "repo migrations recorded=10 first=20261009091639 last=20261010061943"
+    },
+    {
+      "id": "D07",
+      "title": "database check",
+      "status": "PASS",
+      "detail": "public tables=18 rls_enabled=18"
+    },
+    {
+      "id": "D08",
+      "title": "database check",
+      "status": "PASS",
+      "detail": "policies=17"
+    },
+    {
+      "id": "D09",
+      "title": "database check",
+      "status": "PASS",
+      "detail": "security definer functions=11 (distinct; Phase 0 reported 14) all with empty search_path=true [complete_stock_count,create_item_base_unit,create_stock_count,handle_new_user,has_permission,receive_purchase_order_item,record_stock_count_item,record_stock_out,record_waste,update_user_access,user_has_permission]"
+    },
+    {
+      "id": "D10",
+      "title": "database check",
+      "status": "PASS",
+      "detail": "user triggers=31 enabled=31 incl on_auth_user_created=true"
+    },
+    {
+      "id": "D11",
+      "title": "database check",
+      "status": "PASS",
+      "detail": "update rejected: Confirmed stock movements are immutable. Create a correction movement instead.; delete rejected: Confirmed stock movements are immutable. Create a correction movement instead."
+    },
+    {
+      "id": "D12",
+      "title": "database check",
+      "status": "PASS",
+      "detail": "duplicate idempotency keys=0"
+    },
+    {
+      "id": "D13",
+      "title": "database check",
+      "status": "PASS",
+      "detail": "ledger grants: authenticated INSERT=false service_role INSERT=true service_role UPDATE=false"
+    },
+    {
+      "id": "D14",
+      "title": "database check",
+      "status": "PASS",
+      "detail": "PostgreSQL 17.11 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0, 64-bit"
+    },
+    {
+      "id": "D15",
+      "title": "database check",
+      "status": "PASS",
+      "detail": "server timezone=GMT encoding=UTF8"
+    },
+    {
+      "id": "S1-EXPOSURE",
+      "title": "Ollama stays loopback-only; not reachable on any LAN IP",
+      "status": "NOT TESTED",
+      "detail": "listeners: ; LAN IPs tested: ; exposed: False"
+    },
+    {
+      "id": "RES",
+      "title": "RAM: stack idle, Ollama idle/peak, Windows headroom during inference",
+      "status": "WARN",
+      "detail": "stack idle 75 MiB; Ollama idle 0 MB, peak 0 MB; Windows used peak 0 of  MB (headroom  MB); inference 0.5s ok="
+    },
+    {
+      "id": "PERSIST",
+      "title": "external volume survives stop / down / down -v (Docker Desktop)",
+      "status": "PASS",
+      "detail": "{\"baseline\":\"2/2/8dbaae6a337e9f2b9752c814c6693fa8\",\"afterStopStart\":\"2/2/8dbaae6a337e9f2b9752c814c6693fa8\",\"volumeAfterDown\":true,\"afterDownUp\":\"2/2/8dbaae6a337e9f2b9752c814c6693fa8\",\"volumeAfterDownV\":true,\"afterDownVUp\":\"2/2/8dbaae6a337e9f2b9752c814c6693fa8\"}"
+    }
+  ]
+}

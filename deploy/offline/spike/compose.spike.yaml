@@ -1,0 +1,175 @@
+# TOM YUM BANG C — Offline Edition, Phase 2 infrastructure spike (TEMPORARY).
+# Disposable stack with SYNTHETIC data only. Never point it at Production.
+#
+# Images default to the pinned upstream tags (DOCKER-DEPLOYMENT-PLAN.md §3). The sandbox
+# run overrides them with TYBC_IMG_* because Docker Hub is unreachable there (see README).
+# Usage (from this folder):
+#   docker volume create tybc_spike_db_data          # external volume, created once
+#   docker compose -p tybc-spike --env-file <secrets.env> -f compose.spike.yaml up -d
+name: tybc-spike
+
+x-hardening: &hardening
+  pull_policy: never          # offline rule: never contact a registry at runtime
+  security_opt: ["no-new-privileges:true"]
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "3" }
+
+services:
+  db:
+    <<: *hardening
+    image: ${TYBC_IMG_DB:-supabase/postgres:17.11.0.003}
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      AUTHENTICATOR_PASSWORD: ${AUTHENTICATOR_PASSWORD:?}
+      SUPABASE_AUTH_ADMIN_PASSWORD: ${SUPABASE_AUTH_ADMIN_PASSWORD:?}
+      TYBC_BACKUP_PASSWORD: ${TYBC_BACKUP_PASSWORD:?}
+    volumes:
+      - tybc_db_data:/var/lib/postgresql/data
+      - ./db/init-scripts/99-tybc-roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-tybc-roles.sql:ro
+    networks: [tybc_backend]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-h", "127.0.0.1"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+    deploy: { resources: { limits: { memory: 1g } } }
+
+  auth:
+    <<: *hardening
+    image: ${TYBC_IMG_AUTH:-supabase/gotrue:v2.197.0}
+    restart: unless-stopped
+    depends_on: { db: { condition: service_healthy } }
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: "9999"
+      API_EXTERNAL_URL: http://127.0.0.1:3100
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${SUPABASE_AUTH_ADMIN_PASSWORD}@db:5432/postgres
+      GOTRUE_SITE_URL: http://127.0.0.1:3100
+      GOTRUE_URI_ALLOW_LIST: ""
+      GOTRUE_DISABLE_SIGNUP: "true"
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_EXP: "3600"
+      GOTRUE_JWT_SECRET: ${JWT_SECRET:?}
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: "false"
+      GOTRUE_MAILER_AUTOCONFIRM: "true"
+      GOTRUE_EXTERNAL_PHONE_ENABLED: "false"
+      GOTRUE_SMS_AUTOCONFIRM: "false"
+      GOTRUE_LOG_LEVEL: info
+    networks: [tybc_backend]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9999/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    deploy: { resources: { limits: { memory: 128m } } }
+
+  migrate:
+    <<: *hardening
+    image: ${TYBC_IMG_DB:-supabase/postgres:17.11.0.003}
+    restart: "no"
+    depends_on: { auth: { condition: service_healthy } }
+    entrypoint: ["/bin/sh", "/tybc/run-migrations.sh"]
+    environment:
+      PGHOST: db
+      PGUSER: postgres
+      PGDATABASE: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      MIGRATIONS_DIR: /migrations
+    volumes:
+      - ./migrate/run-migrations.sh:/tybc/run-migrations.sh:ro
+      - ${TYBC_MIGRATIONS_DIR:-../../../supabase/migrations}:/migrations:ro
+    networks: [tybc_backend]
+
+  rest:
+    <<: *hardening
+    image: ${TYBC_IMG_REST:-postgrest/postgrest:v14.18}
+    restart: unless-stopped
+    depends_on: { migrate: { condition: service_completed_successfully } }
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${AUTHENTICATOR_PASSWORD}@db:5432/postgres
+      PGRST_DB_SCHEMAS: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET:?}
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+      PGRST_DB_MAX_ROWS: "1000"
+      PGRST_DB_POOL: "10"
+      PGRST_SERVER_PORT: "3000"
+      PGRST_ADMIN_SERVER_PORT: "3001"
+    networks: [tybc_backend]
+    read_only: true
+    cap_drop: [ALL]
+    deploy: { resources: { limits: { memory: 128m } } }
+
+  gateway:
+    <<: *hardening
+    image: ${TYBC_IMG_GATEWAY:?set TYBC_IMG_GATEWAY to the pinned nginx image (repo:tag@sha256:...)}
+    restart: unless-stopped
+    depends_on:
+      auth: { condition: service_healthy }
+      rest: { condition: service_started }
+    environment:
+      ANON_KEY: ${ANON_KEY:?}
+      SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY:?}
+    volumes:
+      - ./gateway/templates/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+    networks: [tybc_backend]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8000/healthz && wget -q -O /dev/null http://auth:9999/health && wget -q -O /dev/null http://rest:3001/ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    deploy: { resources: { limits: { memory: 32m } } }
+
+  # Test probe: runs the compatibility suite from inside the backend network.
+  # It also joins the edge network ONLY to exercise host.docker.internal for spike S1.
+  probe:
+    <<: *hardening
+    image: ${TYBC_IMG_NODE:?set TYBC_IMG_NODE to the pinned Node image (repo:tag@sha256:...)}
+    profiles: ["probe"]
+    depends_on: { gateway: { condition: service_healthy } }
+    working_dir: /tests
+    environment:
+      SUPABASE_URL: http://gateway:8000
+      ANON_KEY: ${ANON_KEY:?}
+      SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY:?}
+      JWT_SECRET: ${JWT_SECRET:?}
+      OLLAMA_URL: http://host.docker.internal:11434
+      OLLAMA_MODEL: qwen3.5:4b
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    volumes:
+      - ./tests:/tests:ro
+    networks: [tybc_backend, tybc_edge]
+    command: ["node", "compat.mjs"]
+
+  # Optional (sandbox spike): the unchanged app wired to the gateway, published on
+  # 127.0.0.1 only. The real app image is a Phase 3 deliverable.
+  app:
+    <<: *hardening
+    image: ${TYBC_IMG_APP:-tybc-spike/app:v1.2.1-spike}
+    profiles: ["app"]
+    restart: unless-stopped
+    depends_on: { gateway: { condition: service_healthy } }
+    environment:
+      SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY:?}
+      TZ: Asia/Bangkok
+    ports:
+      - "127.0.0.1:3100:3000"
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    networks: [tybc_backend, tybc_edge]
+    deploy: { resources: { limits: { memory: 768m } } }
+
+networks:
+  tybc_backend:
+    internal: true
+  tybc_edge: {}
+
+volumes:
+  tybc_db_data:
+    external: true
+    name: ${TYBC_DB_VOLUME:-tybc_spike_db_data}

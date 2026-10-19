@@ -1,0 +1,29 @@
+﻿{
+    "ollamaListeners":  [
+                            "127.0.0.1:11434 pid 27584"
+                        ],
+    "ollamaHost":  {
+                       "process":  null,
+                       "user":  null,
+                       "machine":  null
+                   },
+    "hostDockerInternalInContainer":  "192.168.65.254",
+    "lanProbes":  [
+                      {
+                          "ip":  "172.31.176.1",
+                          "reachableFromHost":  false,
+                          "reachableFromContainer":  false
+                      },
+                      {
+                          "ip":  "192.168.1.123",
+                          "reachableFromHost":  false,
+                          "reachableFromContainer":  false
+                      },
+                      {
+                          "ip":  "192.168.1.122",
+                          "reachableFromHost":  false,
+                          "reachableFromContainer":  false
+                      }
+                  ],
+    "edgeNetwork":  "[{\"Subnet\":\"172.20.0.0/16\",\"Gateway\":\"172.20.0.1\"}]"
+}

@@ -1,0 +1,16 @@
+Ollama v0.40.6 (official linux-amd64 release), started with OLLAMA_HOST=127.0.0.1:11434
+listener: 0100007F:2CAA (= 127.0.0.1:11434)
+
+Host-header guard (requests sent from the host to 127.0.0.1:11434):
+  Host: 127.0.0.1:11434            -> 200 {"version":"0.40.6"}
+  Host: host.docker.internal:11434 -> 200 {"version":"0.40.6"}
+  Host: gateway.docker.internal    -> 200
+  Host: evil.example.com           -> 403
+=> Ollama accepts the host.docker.internal name the app will use; arbitrary names stay blocked.
+
+Negative control, Linux Docker Engine (NOT the target platform):
+  container (tybc_edge, extra_hosts host-gateway) resolves host.docker.internal -> 172.17.0.1
+  GET http://host.docker.internal:11434/api/version -> ECONNREFUSED
+=> On a plain Docker Engine a loopback-bound host service is unreachable from containers.
+   S1 therefore depends on Docker Desktop for Windows forwarding host.docker.internal to the
+   Windows loopback. This must be proven on the client notebook (S1 NOT TESTED on target).

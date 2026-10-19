@@ -1,0 +1,9 @@
+{
+  "name": "tybc-offline-spike-tests",
+  "private": true,
+  "type": "module",
+  "description": "Phase 2 compatibility probe. Pins the same supabase-js as the app (package-lock of v1.2.1).",
+  "dependencies": {
+    "@supabase/supabase-js": "2.117.3"
+  }
+}

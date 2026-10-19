@@ -1,0 +1,28 @@
+Schema parity: repository migrations vs Production schema dump (read-only local backup file)
+
+Source A: fresh sandbox DB built by the 10 repository migrations (migrate runner, role postgres)
+Source B: fresh sandbox DB (same Supabase bootstrap) into which the existing backup file
+          restaurant-stock-backups/production-20261015-223431/schema.sql was restored
+          (schema only: 0 COPY/INSERT lines; SHA-256 b8330b0b...6d017e4d matches the backup's SHA256SUMS;
+          the backup's migration-list.txt shows the same 10 versions Local = Remote)
+          Restore errors: 1 - extension "supabase_vault" not available in the sandbox substitute (unused by the app)
+
+Catalog fingerprint (public schema), A vs B:
+  COL    columns (name, position, type, nullability, default)          189 / 189  diff 0
+  CON    constraints (pg_get_constraintdef)                            134 / 134  diff 0
+  IDX    indexes (indexdef)                                              71 / 71   diff 0
+  POL    RLS policies (cmd, roles, USING, WITH CHECK)                    17 / 17   diff 0
+  FUN    functions (identity args, SECURITY DEFINER, proconfig, md5(source), result) 26 / 26  diff 0
+  TRG    triggers (pg_get_triggerdef)                                    30 / 30   diff 0
+  VIEW   views (md5(definition))                                          1 / 1    diff 0
+  RLS    relrowsecurity / relforcerowsecurity                            18 / 18   diff 0
+
+Privileges for anon / authenticated / service_role:
+  Explicit GRANTs in the Production dump vs privileges produced by the migrations:
+    table privileges: 161 (dump) vs 153 standard + 8 MAINTAIN (migrations; information_schema omits MAINTAIN,
+                      verified with has_table_privilege) -> identical
+    function EXECUTE: 60 vs 60 -> identical
+  Restored DB B itself had MORE privileges (532 vs 286 table grants; anon/authenticated EXECUTE on
+  record_stock_out, record_waste, update_user_access, ...) because the target database's DEFAULT
+  PRIVILEGES apply while a schema dump is restored. => Never rebuild the schema from a dump; always
+  migrations + data-only load (as the data migration plan already specifies). See finding F13.

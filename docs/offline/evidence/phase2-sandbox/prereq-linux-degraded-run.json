@@ -1,0 +1,156 @@
+{
+  "tool": "Test-TomYum-OfflinePrerequisites",
+  "version": "2.0-phase2",
+  "readOnly": true,
+  "computer": null,
+  "elevated": false,
+  "generatedUtc": "2026-10-19T14:07:07.4167313Z",
+  "summary": {
+    "PASS": 2,
+    "WARN": 3,
+    "FAIL": 3,
+    "NOT CHECKED": 12
+  },
+  "results": [
+    {
+      "id": "P01",
+      "area": "Windows",
+      "status": "NOT CHECKED",
+      "detail": "The term 'Get-CimInstance' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+      "hint": ""
+    },
+    {
+      "id": "P02",
+      "area": "CPU architecture",
+      "status": "NOT CHECKED",
+      "detail": "The term 'Get-CimInstance' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+      "hint": ""
+    },
+    {
+      "id": "P03",
+      "area": "RAM",
+      "status": "NOT CHECKED",
+      "detail": "The term 'Get-CimInstance' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+      "hint": ""
+    },
+    {
+      "id": "P04",
+      "area": "Free disk",
+      "status": "NOT CHECKED",
+      "detail": "The term 'Get-CimInstance' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+      "hint": ""
+    },
+    {
+      "id": "P05",
+      "area": "BIOS virtualization",
+      "status": "NOT CHECKED",
+      "detail": "The term 'Get-CimInstance' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+      "hint": ""
+    },
+    {
+      "id": "P06",
+      "area": "WSL",
+      "status": "FAIL",
+      "detail": "wsl.exe not found",
+      "hint": "Install WSL (administrative step after approval)."
+    },
+    {
+      "id": "P07",
+      "area": "Windows features",
+      "status": "NOT CHECKED",
+      "detail": "VirtualMachinePlatform=unreadable; Microsoft-Windows-Subsystem-Linux=unreadable",
+      "hint": "Could not read optional features."
+    },
+    {
+      "id": "P08",
+      "area": "Docker Desktop",
+      "status": "FAIL",
+      "detail": "not installed",
+      "hint": "Install Docker Desktop (administrative step after approval; licence eligibility recorded as CONFIRMED)."
+    },
+    {
+      "id": "P09",
+      "area": "Docker Engine",
+      "status": "PASS",
+      "detail": "client 29.8.2, server 29.8.2 (linux/amd64)",
+      "hint": ""
+    },
+    {
+      "id": "P10",
+      "area": "Docker Compose",
+      "status": "PASS",
+      "detail": "compose 5.5.1",
+      "hint": ""
+    },
+    {
+      "id": "P11",
+      "area": "Docker VM resources",
+      "status": "WARN",
+      "detail": "VM memory 7.8 GB, CPUs 2, OS 'Ubuntu 24.04.5 LTS', .wslconfig memory=not set",
+      "hint": "No effective cap: recommended .wslconfig memory=4GB (operator applies it manually; never automatic)."
+    },
+    {
+      "id": "P12",
+      "area": "Ports",
+      "status": "NOT CHECKED",
+      "detail": "Get-NetTCPConnection unavailable",
+      "hint": ""
+    },
+    {
+      "id": "P13",
+      "area": "Ollama executable",
+      "status": "FAIL",
+      "detail": "ollama not found on PATH",
+      "hint": "Install Ollama (administrative step after approval)."
+    },
+    {
+      "id": "P14",
+      "area": "Ollama API",
+      "status": "WARN",
+      "detail": "not reachable on 127.0.0.1:11434 (not running?)",
+      "hint": "Start Ollama and re-run; this tool does not start it."
+    },
+    {
+      "id": "P15",
+      "area": "AI model",
+      "status": "NOT CHECKED",
+      "detail": "API not reachable; cannot list models",
+      "hint": ""
+    },
+    {
+      "id": "P16",
+      "area": "Ollama exposure",
+      "status": "NOT CHECKED",
+      "detail": "listener: not readable; OLLAMA_HOST: unset; firewall: not checked",
+      "hint": "Listening sockets could not be read."
+    },
+    {
+      "id": "P17",
+      "area": "Clock",
+      "status": "WARN",
+      "detail": "time zone: Asia/Bangkok; UTC now: 2026-10-19T14:07:07Z; Docker VM drift: 0.3 s",
+      "hint": "Expected time zone 'SE Asia Standard Time'."
+    },
+    {
+      "id": "P18",
+      "area": "Power (sleep on AC)",
+      "status": "NOT CHECKED",
+      "detail": "powercfg not readable",
+      "hint": ""
+    },
+    {
+      "id": "P19",
+      "area": "Repository",
+      "status": "NOT CHECKED",
+      "detail": "no git repository at '/tmp/nonexistent'",
+      "hint": ""
+    },
+    {
+      "id": "P20",
+      "area": "Docker Desktop licence",
+      "status": "NOT CHECKED",
+      "detail": "deploy/offline/decisions.env not found",
+      "hint": ""
+    }
+  ]
+}

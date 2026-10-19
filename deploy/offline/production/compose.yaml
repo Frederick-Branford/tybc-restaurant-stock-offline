@@ -1,0 +1,222 @@
+name: tybc-offline
+
+x-hardening: &hardening
+  pull_policy: never
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  db:
+    <<: *hardening
+    image: supabase/postgres:17.11.0.003@sha256:7374d196da7e301512cc5329e18040e0f7bb856287b323777cdadecccbc6c7e4
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      AUTHENTICATOR_PASSWORD: ${AUTHENTICATOR_PASSWORD:?}
+      SUPABASE_AUTH_ADMIN_PASSWORD: ${SUPABASE_AUTH_ADMIN_PASSWORD:?}
+      TYBC_BACKUP_PASSWORD: ${TYBC_BACKUP_PASSWORD:?}
+    volumes:
+      - tybc_db_data:/var/lib/postgresql/data
+      - ./db/init-scripts/99-tybc-roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-tybc-roles.sql:ro
+    networks:
+      - tybc_backend
+    healthcheck:
+      test:
+        - CMD
+        - pg_isready
+        - -U
+        - postgres
+        - -h
+        - 127.0.0.1
+      interval: 5s
+      timeout: 5s
+      retries: 60
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+  auth:
+    <<: *hardening
+    image: supabase/gotrue:v2.197.0@sha256:1736a63078f5922b198c4cbe50f80ab9a2d3b54fe8b7b6cfb2e9dc5dbbc12c6b
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: "9999"
+      API_EXTERNAL_URL: http://127.0.0.1:3100
+      GOTRUE_SITE_URL: http://127.0.0.1:3100
+      GOTRUE_URI_ALLOW_LIST: ""
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${SUPABASE_AUTH_ADMIN_PASSWORD}@db:5432/postgres
+      GOTRUE_DISABLE_SIGNUP: "true"
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_EXP: "3600"
+      GOTRUE_JWT_SECRET: ${JWT_SECRET:?}
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: "false"
+      GOTRUE_MAILER_AUTOCONFIRM: "true"
+      GOTRUE_EXTERNAL_PHONE_ENABLED: "false"
+      GOTRUE_SMS_AUTOCONFIRM: "false"
+      GOTRUE_LOG_LEVEL: info
+    networks:
+      - tybc_backend
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - -q
+        - -O
+        - /dev/null
+        - http://127.0.0.1:9999/health
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+
+  migrate:
+    <<: *hardening
+    image: supabase/postgres:17.11.0.003@sha256:7374d196da7e301512cc5329e18040e0f7bb856287b323777cdadecccbc6c7e4
+    restart: "no"
+    depends_on:
+      auth:
+        condition: service_healthy
+    entrypoint:
+      - /bin/sh
+      - /tybc/run-migrations.sh
+    environment:
+      PGHOST: db
+      PGUSER: postgres
+      PGDATABASE: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      MIGRATIONS_DIR: /migrations
+    volumes:
+      - ./migrate/run-migrations.sh:/tybc/run-migrations.sh:ro
+      - ../../../supabase/migrations:/migrations:ro
+    networks:
+      - tybc_backend
+
+  rest:
+    <<: *hardening
+    image: postgrest/postgrest:v14.18@sha256:c7cd7e265a85b05248abf53f4473fcec7e327c282d0bd0cf60f1551996d09fcf
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${AUTHENTICATOR_PASSWORD}@db:5432/postgres
+      PGRST_DB_SCHEMAS: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET:?}
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+      PGRST_DB_MAX_ROWS: "1000"
+      PGRST_DB_POOL: "10"
+      PGRST_SERVER_PORT: "3000"
+      PGRST_ADMIN_SERVER_PORT: "3001"
+    networks:
+      - tybc_backend
+    read_only: true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+
+  gateway:
+    <<: *hardening
+    image: nginx:1.30.6-alpine3.24@sha256:970364228b1e4f932abc22d321932816782cca8a20b85a77552a7cfe9acfb3b5
+    restart: unless-stopped
+    depends_on:
+      auth:
+        condition: service_healthy
+      rest:
+        condition: service_started
+    environment:
+      ANON_KEY: ${ANON_KEY:?}
+      SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY:?}
+    volumes:
+      - ./gateway/templates/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+    networks:
+      - tybc_backend
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          wget -q -O /dev/null http://127.0.0.1:8000/healthz &&
+          wget -q -O /dev/null http://auth:9999/health &&
+          wget -q -O /dev/null http://rest:3001/ready
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    deploy:
+      resources:
+        limits:
+          memory: 32m
+
+  app:
+    <<: *hardening
+    image: ${TYBC_IMG_APP:-tybc-stock-app:phase3b-part2}
+    restart: unless-stopped
+    depends_on:
+      gateway:
+        condition: service_healthy
+    environment:
+      TYBC_SUPABASE_URL: http://gateway:8000
+      TYBC_SUPABASE_PUBLISHABLE_KEY: ${ANON_KEY:?}
+      SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY:?}
+
+      AI_LOCAL_ENABLED: "true"
+      TYBC_OFFLINE_CONTAINER: "true"
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      OLLAMA_MODEL: qwen3.5:4b
+      OLLAMA_TIMEOUT_MS: "120000"
+      OLLAMA_KEEP_ALIVE: 10m
+
+      TZ: Asia/Bangkok
+    ports:
+      - "127.0.0.1:3100:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - tybc_backend
+      - tybc_edge
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - >-
+          fetch('http://127.0.0.1:3000/api/health')
+          .then(r => { if (!r.ok) process.exit(1) })
+          .catch(() => process.exit(1))
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    deploy:
+      resources:
+        limits:
+          memory: 768m
+
+networks:
+  tybc_backend:
+    internal: true
+
+  tybc_edge: {}
+
+volumes:
+  tybc_db_data:
+    external: true
+    name: ${TYBC_DB_VOLUME:-tybc_db_data}
