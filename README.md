@@ -1,4 +1,4 @@
-<div align="center">
+﻿<div align="center">
 
 <img src="./public/brand/tom-yum-bang-c-logo.jpg" alt="TOM YUM BANG C" width="140" />
 
@@ -265,7 +265,7 @@ Ollama:       http://127.0.0.1:11434
 Start the validated local stack from PowerShell:
 
 ```powershell
-cd "D:\TYBC-Dev\restaurant-stock"
+cd "D:\TYBC-Dev\tybc-restaurant-stock-offline"
 
 $env:TYBC_DB_VOLUME = "tybc_phase3_rehearsal_db_data"
 
@@ -291,7 +291,7 @@ http://127.0.0.1:3100/api/health
 ### Stop the Local Stack
 
 ```powershell
-cd "D:\TYBC-Dev\restaurant-stock"
+cd "D:\TYBC-Dev\tybc-restaurant-stock-offline"
 
 $env:TYBC_DB_VOLUME = "tybc_phase3_rehearsal_db_data"
 
@@ -557,3 +557,4 @@ Offline Operations - Local Intelligence
 **Validated Offline Edition**
 
 </div>
+
