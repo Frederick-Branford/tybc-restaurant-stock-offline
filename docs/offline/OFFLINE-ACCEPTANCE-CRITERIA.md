@@ -111,10 +111,11 @@ docker compose exec app node -e "fetch('https://example.com').then(()=>process.e
 
 | ID | Pri | Steps | Expected | Evidence |
 |---|---|---|---|---|
-| AC-AI-01 | MUST | Generate the Local AI summary | Answer from `qwen3.5:4b` via `host.docker.internal:11434` within `OLLAMA_TIMEOUT_MS`; cold and warm times recorded | Screenshot + timing |
-| AC-AI-02 | MUST | Quit Ollama; use the AI card; use stock pages; restart Ollama; retry | Clean degraded message, no hang; stock pages unaffected; recovers without app restart | Screenshots |
+| AC-AI-01 | MUST | Generate the Local AI summary | Answer from `qwen3.5:4b` through Docker-internal `http://ollama:11434` within `OLLAMA_TIMEOUT_MS`; cold and warm times recorded | Screenshot + timing |
+| AC-AI-02 | MUST | Stop the Compose `ollama` service; force-recreate `app`; use core stock pages; start Ollama again; retry Local AI | `app` remains healthy and core stock functions remain available while AI is unavailable; Local AI recovers after Ollama returns | Container status + screenshots |
 | AC-AI-03 | MUST | Cloud AI section with `OPENAI_*` unset | Hidden or clean "not configured"; no outbound attempt | Screenshot |
 | AC-AI-04 | MUST | Row counts before/after an AI run | Unchanged (AI is read-only) | SQL |
+| AC-AI-05 | MUST | Stop native Windows Ollama so no host listener exists on `11434`; from the `app` container query `/api/tags` and run a small inference against `http://ollama:11434` | No Windows host listener; Docker Ollama reports `qwen3.5:4b`; inference succeeds | PowerShell listener check + container output |
 
 ### H. Ledger checks (SQL, run as `supabase_admin` inside `begin … rollback` where they attempt writes)
 
@@ -152,14 +153,14 @@ docker compose exec app node -e "fetch('https://example.com').then(()=>process.e
 
 | ID | Pri | Steps | Expected | Evidence |
 |---|---|---|---|---|
-| AC-SEC-01 | MUST | `Get-NetTCPConnection -State Listen` for 3000, 3100, 5432, 8000, 9999, 11434 | 3000 and 11434 on `127.0.0.1` only; 5432/8000/9999 absent | Output |
-| AC-SEC-02 | MUST | Separate session with LAN connected (Internet optional): from another LAN device probe notebook IP ports 3000, 5432, 8000, 11434 | All closed | Output |
-| AC-SEC-03 | MUST | Prerequisite check P16 | PASS (loopback only, no inbound rule) | Report |
+| AC-SEC-01 | MUST | Inspect Windows listeners for 3000, 3100, 5432, 8000, 9999, 11434 and inspect Compose port bindings | Only the intended app port is published on `127.0.0.1`; `11434`, DB, gateway and auth ports have no Windows host binding | Output |
+| AC-SEC-02 | MUST | Separate session with LAN connected (Internet optional): from another LAN device probe notebook IP ports 3000, 3100, 5432, 8000, 9999, 11434 | All closed from the LAN | Output |
+| AC-SEC-03 | MUST | Prerequisite check P16 | PASS: Ollama port `11434` is Docker-internal only with no Windows/LAN host binding | Report |
 | AC-SEC-04 | MUST | Secrets hygiene: image scan, `docker history`, image config env, logs grep for key fingerprints, `icacls` on the secrets file, `git status` | No secrets outside the secrets file; ACL restricted | Output |
 | AC-SEC-05 | MUST | From an ops one-off: `/rest/v1/items` with no `apikey`, a random `apikey` | 401 | Output |
 | AC-SEC-06 | MUST | Anon key only, no user JWT: `GET /rest/v1/items` | `[]` (RLS `TO authenticated`) | Output |
 | AC-SEC-07 | MUST | `POST /auth/v1/signup` | Rejected (sign-ups disabled) | Output |
-| AC-SEC-08 | MUST | Ollama allowlist: unit matrix (ADR §5) passes; runtime with `OLLAMA_BASE_URL=http://192.168.1.20:11434` | Tests green; AI reports invalid configuration, no request sent | Test output + screenshot |
+| AC-SEC-08 | MUST | Ollama destination allowlist unit matrix (ADR-002 §4) passes; runtime with `OLLAMA_BASE_URL=http://192.168.1.20:11434` | Tests green; AI reports invalid configuration and sends no request; offline-container mode permits only exact `http://ollama:11434` | Test output + screenshot |
 
 ### L. Clock and recovery
 
