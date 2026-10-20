@@ -35,12 +35,12 @@ Script (Phase 2): `scripts/windows/Test-TomYum-OfflinePrerequisites.ps1` with a 
 | P08 | Docker Desktop installed | Uninstall registry key `DisplayVersion`, `Docker Desktop.exe` path | Installed, version recorded | — | Absent |
 | P09 | Docker Engine reachable | `docker version --format json` | Client + Server (linux) reported | Client only (Desktop not running) | CLI absent |
 | P10 | Docker Compose | `docker compose version` | v2 present | — | Absent |
-| P11 | Docker resources | `docker info --format json` (`MemTotal`, `NCPU`), `%USERPROFILE%\.wslconfig` (read) | VM memory 3–6 GB | > 6 GB or no cap | < 3 GB |
+| P11 | Docker resources | `docker info --format json` (`MemTotal`, `NCPU`), `%USERPROFILE%\.wslconfig` (read) | Validated profile: 8 GB VM memory, 8 processors | > 8 GB or no cap: review Windows headroom | < 7 GB: insufficient validated headroom for `qwen3.5:4b` |
 | P12 | Port usage | `Get-NetTCPConnection -State Listen` + owning process | 3000/3100/5432/8000/9999/54321–54324 free | Used by a known TYBC process (e.g., old launcher) | Used by an unknown process |
-| P13 | Ollama installed | `Get-Command ollama`, `ollama --version` | Present | — | Absent |
-| P14 | Ollama API health | `GET http://127.0.0.1:11434/api/version` | 200 | Not running | — |
-| P15 | Model availability | `GET http://127.0.0.1:11434/api/tags` contains `qwen3.5:4b` | Present | API not running (not checked) | Missing |
-| P16 | Ollama exposure | Listener address for 11434; `OLLAMA_HOST` (user + machine scope); inbound firewall rules for `ollama.exe`/11434 (`Get-NetFirewallRule`, read) | Loopback only, no inbound allow rule | Rule exists but disabled | Listens on `0.0.0.0`/`::`/LAN IP, or enabled inbound allow rule |
+| P13 | Ollama image available | `docker image inspect ollama/ollama:0.40.4` | Present | — | Missing |
+| P14 | Ollama persistent volume | `docker volume inspect ${TYBC_OLLAMA_VOLUME}` | Present | — | Missing |
+| P15 | Model availability (runtime gate) | `docker compose exec -T ollama ollama list` contains `qwen3.5:4b` | Present | Service not running | Missing |
+| P16 | Ollama exposure | Compose/inspect shows no host binding for port `11434` | Docker-internal only | — | Any Windows/LAN host binding |
 | P17 | Time | Time zone (`Get-TimeZone`), `w32tm /query /status` (if permitted) | `SE Asia Standard Time` | Not synced recently | Other time zone |
 | P18 | Power | `powercfg /a`, active scheme (read) | — | Sleep on AC < 60 min (informational) | — |
 
@@ -61,6 +61,7 @@ Output:
 | `rest` | `postgrest/postgrest:v14.18@sha256:…` | PostgREST API on 3000, admin on 3001 | `tybc_backend` | none | `unless-stopped` | probed by `gateway` (image has no shell) |
 | `gateway` | nginx unprivileged alpine `@sha256:…` | Routes `/auth/v1/*` and `/rest/v1/*`, `apikey` allowlist | `tybc_backend` | none | `unless-stopped` | `wget` to `/healthz`, `http://auth:9999/health`, `http://rest:3001/ready` |
 | `app` | `tybc-app:<release>` | Next.js standalone `node server.js` | `tybc_backend`, `tybc_edge` | `127.0.0.1:3000` | `unless-stopped` | `GET http://127.0.0.1:3000/login` → 200 |
+| `ollama` | `ollama/ollama:0.40.4` | Local AI inference with `qwen3.5:4b` | `tybc_backend` | none | `unless-stopped` | `ollama list` |
 | `backup` | `tybc-ops:<release>` | Scheduler loop: daily logical backup, retention, manifest | `tybc_backend` | none | `unless-stopped` | heartbeat file younger than 30 min |
 
 All long-running services: `security_opt: no-new-privileges:true`, log driver `json-file` with `max-size: 10m`, `max-file: 3`. No container mounts the Docker socket.
@@ -69,10 +70,10 @@ All long-running services: `security_opt: no-new-privileges:true`, log driver `j
 
 | Network | Driver | `internal` | Members | Purpose |
 |---|---|---|---|---|
-| `tybc_backend` | bridge | **true** (no route out of the host) | db, auth, migrate, rest, gateway, backup, app | All data-plane traffic |
-| `tybc_edge` | bridge | false | app | Publishing `127.0.0.1:3000` and reaching `host.docker.internal:11434` |
+| `tybc_backend` | bridge | **true** (no route out of the host) | db, auth, migrate, rest, gateway, backup, app, ollama | All data-plane and Local AI traffic |
+| `tybc_edge` | bridge | false | app | Publishing the application on Windows loopback only |
 
-`app` gets `extra_hosts: ["host.docker.internal:host-gateway"]`. Only `app` can leave the backend network. When the notebook is offline there is no route anywhere; when it is temporarily online, `app` makes no outbound calls by design (OpenAI disabled, fonts local, telemetry off) — verified by AC-NET-*.
+`app` requires no host bridge or `extra_hosts` entry for Local AI. It reaches Ollama through Docker DNS at `http://ollama:11434`. The app remains on `tybc_edge` only for its loopback host publication. When the notebook is temporarily online, the app makes no outbound calls by design (OpenAI disabled, fonts local, telemetry off) — verified by AC-NET-*.
 
 ## 5. Port map
 
@@ -84,7 +85,7 @@ All long-running services: `security_opt: no-new-privileges:true`, log driver `j
 | GoTrue | `auth:9999` | — | `gateway`, ops one-offs |
 | PostgREST API / admin | `rest:3000` / `rest:3001` | — | `gateway` |
 | PostgreSQL | `db:5432` | — | backend services; ops via `docker compose exec` |
-| Ollama (native, not a container) | — | `127.0.0.1:11434` on Windows | Windows loopback + `host.docker.internal` from `app` |
+| Ollama | `ollama:11434` | — | `app` through the internal `tybc_backend` network only |
 
 Rules: no `0.0.0.0` bindings; no DB, gateway or GoTrue port is ever published (ops access uses `docker compose exec`/`run` inside the backend network). The prerequisite check and AC-SEC-01 verify listeners.
 
@@ -96,6 +97,7 @@ Coexistence before cutover: the existing cloud launcher uses `127.0.0.1:3000`. T
 |---|---|---|---|---|
 | `tybc_db_data` | Docker named volume, **`external: true`**, ext4 inside Docker Desktop's VM disk | `db:/var/lib/postgresql/data` | Live database cluster | Not removed by `compose down -v` (external); daily logical backups |
 | `tybc_db_data_<yyyyMMdd-HHmm>` | named volume (blue/green) | same, selected via `TYBC_DB_VOLUME` | Restored/migrated candidate | Old volume retained 14 days after a switch |
+| `tybc_ollama_data` | Docker named volume, **`external: true`** | `ollama:/root/.ollama` | Ollama model store including `qwen3.5:4b` | Persistent across normal Compose shutdown; never remove during normal operation |
 | `C:\TomYumBangC\backups` | bind mount (NTFS) | `backup:/backups` (rw), `migrate`/ops: ro when restoring | Backup sets | Weekly USB copy, SHA-256 |
 | `C:\TomYumBangC\release\<ver>\db-init\90-tybc-roles.sh` | bind mount, read-only file | `db:/docker-entrypoint-initdb.d/init-scripts/90-tybc-roles.sh` | Role passwords, `tybc_backup` role (first init only) | In release bundle, checksummed |
 | `C:\TomYumBangC\release\<ver>\gateway\nginx.conf.template` | bind mount, read-only | `gateway:/etc/nginx/templates/` | Routes + key map (rendered with envsubst at start) | Release bundle |
@@ -129,7 +131,7 @@ flowchart LR
   auth -- service_healthy --> gateway
   rest -- service_started --> gateway
   gateway -- service_healthy --> app
-  ollama[[Ollama native<br/>Windows]] -. optional at runtime .-> app
+  ollama[[ollama<br/>Docker Compose]] -. optional Local AI .-> app
 ```
 
 Order rationale:
@@ -139,7 +141,7 @@ Order rationale:
 3. `migrate` applies only unapplied repo migrations, then exits 0. A failure stops the chain — `rest`, `gateway` and `app` never start against a half-migrated database.
 4. `rest` starts after migrations, so its schema cache already contains every table/function.
 5. `app` starts only after the gateway reports both upstreams ready.
-6. Ollama is **not** a dependency. If it is down, the Local AI card degrades and every stock function keeps working.
+6. Ollama runs as a Compose service but is **not** an `app.depends_on` dependency. If it is stopped or unhealthy, the Local AI feature degrades while the application and core stock functions remain available. This was validated by stopping Ollama, force-recreating `app`, and confirming `app` returned healthy.
 
 Targets: warm start (Docker engine ready → `app` healthy) ≤ 120 s; first-ever initialisation ≤ 5 min. `Start-TomYum-Offline` waits up to 180 s, then prints which service is unhealthy.
 
@@ -159,6 +161,8 @@ Targets: warm start (Docker engine ready → `app` healthy) ≤ 120 s; first-eve
 
 **Offline distribution:** images are built/pulled on the developer machine (online), exported with `docker save` into `release\<ver>\images\*.tar` with `SHA256SUMS`, copied to the notebook and imported with `docker load`. The notebook never needs a registry; rebuilding on the notebook is not part of normal operation.
 
+Ollama is distributed as the pinned Docker image `ollama/ollama:0.40.4`. Model data is provisioned separately into the external `tybc_ollama_data` volume before offline operation; pulling a model from the Internet is not part of normal offline startup.
+
 **Image gate (Phase 3):** fail the build if the app image contains the Cloud project ref, `restaurant-stock-rho`, `fonts.googleapis.com` or `fonts.gstatic.com` in `.next/`, or if `docker inspect`/`docker history` shows any key-like value.
 
 ## 9. Configuration and secrets model
@@ -167,7 +171,7 @@ Two files, both **outside the repository**, passed to Compose with `--env-file` 
 
 | File | Content | Permissions |
 |---|---|---|
-| `C:\TomYumBangC\config\offline.env` | Non-secret: release version, `TYBC_DB_VOLUME`, `TYBC_APP_PORT`, `TZ`, Ollama URL/model/timeouts, backup schedule, retention counts | Normal user file; template `offline.env.example` lives in the repo |
+| `C:\TomYumBangC\config\offline.env` | Non-secret: release version, `TYBC_DB_VOLUME`, `TYBC_OLLAMA_VOLUME`, `TYBC_APP_PORT`, `TZ`, backup schedule, retention counts | Normal user file; template `offline.env.example` lives in the repo |
 | `C:\TomYumBangC\secrets\offline.secrets.env` | `POSTGRES_PASSWORD`, `AUTHENTICATOR_PASSWORD`, `SUPABASE_AUTH_ADMIN_PASSWORD`, `TYBC_BACKUP_PASSWORD`, `JWT_SECRET`, `ANON_KEY`, `SERVICE_ROLE_KEY` | ACL: the operating Windows user, `SYSTEM`, `Administrators` only; inheritance removed |
 
 Secret distribution (least privilege):
@@ -191,7 +195,8 @@ Key non-secret settings:
 | `auth` | `GOTRUE_DISABLE_SIGNUP=true`; email provider on, `GOTRUE_MAILER_AUTOCONFIRM=true`, no SMTP; phone and all OAuth providers off; `GOTRUE_JWT_EXP=3600`, `GOTRUE_JWT_AUD=authenticated`, `GOTRUE_JWT_DEFAULT_GROUP_NAME=authenticated`, `GOTRUE_JWT_ADMIN_ROLES=service_role`; `GOTRUE_SITE_URL=http://127.0.0.1:3000`; refresh-token rotation as Cloud; password minimum length matched to Cloud (read during migration prep) |
 | `rest` | `PGRST_DB_SCHEMAS=public`, `PGRST_DB_ANON_ROLE=anon`, `PGRST_DB_MAX_ROWS=1000` (matched to Cloud), `PGRST_ADMIN_SERVER_PORT=3001`, `PGRST_DB_POOL=10` |
 | `db` | Server time zone stays **UTC** (Cloud parity; functions and `now()` behave identically); `shared_buffers=256MB`, `max_connections=60`; `fsync`, `full_page_writes`, `synchronous_commit` left **on** |
-| `app` | `NODE_ENV=production`, `TZ=Asia/Bangkok` (parity with today's Windows launcher), `NEXT_TELEMETRY_DISABLED=1`, `TYBC_SUPABASE_URL=http://gateway:8000`, `TYBC_SUPABASE_PUBLISHABLE_KEY=${ANON_KEY}`, `SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}`, `AI_LOCAL_ENABLED=true`, `OLLAMA_BASE_URL=http://host.docker.internal:11434`, `OLLAMA_MODEL=qwen3.5:4b`, `OLLAMA_TIMEOUT_MS`/`OLLAMA_KEEP_ALIVE` as today's launcher; `OPENAI_*` and `VERCEL` unset |
+| `app` | `NODE_ENV=production`, `TZ=Asia/Bangkok`, `NEXT_TELEMETRY_DISABLED=1`, `TYBC_SUPABASE_URL=http://gateway:8000`, `TYBC_SUPABASE_PUBLISHABLE_KEY=${ANON_KEY}`, `SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}`, `AI_LOCAL_ENABLED=true`, `TYBC_OFFLINE_CONTAINER=true`, `OLLAMA_BASE_URL=http://ollama:11434`, `OLLAMA_MODEL=qwen3.5:4b`, `OLLAMA_TIMEOUT_MS=120000`, `OLLAMA_KEEP_ALIVE=2m`; `OPENAI_*` and `VERCEL` unset |
+| `ollama` | Image `ollama/ollama:0.40.4`; model store `/root/.ollama` backed by external `tybc_ollama_data`; port `11434` is Docker-internal only; memory limit `6500m` |
 
 App resolution order (Phase 3 change): `TYBC_SUPABASE_URL ?? NEXT_PUBLIC_SUPABASE_URL`, `TYBC_SUPABASE_PUBLISHABLE_KEY ?? NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`; fail fast at startup with a clear error if neither is set. On Vercel the `TYBC_*` names are unset, so behaviour is unchanged (names are namespaced to avoid collisions with Supabase–Vercel integration variables).
 
@@ -249,19 +254,19 @@ No new migration is planned for the offline edition. Any future migration follow
 | `rest` | 128 MiB | 0.5 | |
 | `gateway` | 32 MiB | 0.25 | |
 | `app` | 768 MiB | 2 | `NODE_OPTIONS=--max-old-space-size=512` |
+| `ollama` | `6500m` | — | `qwen3.5:4b`; measured around 5.8 GiB while loaded during full-stack inference |
 | `backup` | 256 MiB | 0.5 | Mostly idle |
 | `migrate` | 256 MiB | 1 | One-shot |
-| **Ceiling (long-running)** | **≈ 2.3 GiB** | | Typical use expected ≈ 0.8–1.2 GiB; measured in Phase 6 |
+| **Observed full-stack load** | **≈ 6.1 GiB with model loaded** | | Ollama dominates memory use; Compose limits are caps, not reservations |
 
-Host view (16 GB): Windows + browser ≈ 5–6 GB; Ollama with `qwen3.5:4b` loaded ≈ 3–4.5 GB (measured in acceptance); Docker VM capped at 4 GB ⇒ peak ≈ 13–15 GB.
+Host view (16 GB): Docker Desktop / WSL2 is capped at 8 GB. During validated full-stack Local AI inference, Ollama used about 5.8 GiB and the remaining application/database services used only a few hundred MiB, leaving the VM within the 8 GB cap while preserving Windows headroom.
 
 Recommended (operator-applied after approval, never by script) `%USERPROFILE%\.wslconfig`:
 
 ```ini
 [wsl2]
-memory=4GB
-processors=4
-swap=2GB
+memory=8GB
+processors=8
 ```
 
 ## 13. Manual OWNER password reset

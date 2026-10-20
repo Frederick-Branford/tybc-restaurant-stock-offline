@@ -2,11 +2,13 @@
 
 | Field | Value |
 |---|---|
-| Status | **Proposed** — Phase 1 planning, awaiting approval before Phase 2 |
+| Status | **Superseded** — replaced by ADR-002 (Ollama in Docker Compose) on 2026-10-20 |
 | Date | 2026-10-19 |
 | Baseline | `v1.2.1` (`main` @ `53ed3f7`) |
 | Inputs | [`PHASE-0-AUDIT.md`](PHASE-0-AUDIT.md) (blockers B1–B12), owner decisions at Phase 1 kickoff |
 | Related | [`DOCKER-DEPLOYMENT-PLAN.md`](DOCKER-DEPLOYMENT-PLAN.md) · [`DATA-MIGRATION-PLAN.md`](DATA-MIGRATION-PLAN.md) · [`OFFLINE-ACCEPTANCE-CRITERIA.md`](OFFLINE-ACCEPTANCE-CRITERIA.md) · [`IMPLEMENTATION-ROADMAP.md`](IMPLEMENTATION-ROADMAP.md) |
+
+> **Superseded architecture notice (2026-10-20):** This ADR records the original native-Windows-Ollama design and remains unchanged as historical rationale. The validated final runtime now runs Ollama as an internal Docker Compose service. See ADR-002 for the current architecture.
 
 > **Guardrails for every phase until cutover is approved.** Do not modify Supabase Cloud, change Vercel Production, modify `.env.local`, modify the `v1.2.1` tag, reset any linked database, run `supabase db reset --linked`, or copy/print secrets. Cloud access before cutover is limited to read-only extraction (see the data migration plan).
 

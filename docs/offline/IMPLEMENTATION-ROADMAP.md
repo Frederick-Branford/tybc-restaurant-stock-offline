@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Phase 1 approved. **Phase 2 spike executed 2026-10-19** — Windows-side gates (S1, notebook prerequisites, upstream image digests) still open; see [`PHASE-2-SPIKE-RESULTS.md`](PHASE-2-SPIKE-RESULTS.md). Phase 3 only after approval. |
+| Status | **Final offline architecture validated 2026-10-20.** Ollama runs inside Docker Compose per ADR-002. Earlier S1 / `host.docker.internal` entries below are retained as historical milestones and are not current runtime requirements. |
 | Date | 2026-10-19 |
 | Baseline | `v1.2.1` (`main` @ `53ed3f7`) |
 | Documents | [ADR](OFFLINE-ARCHITECTURE-ADR.md) · [Deployment](DOCKER-DEPLOYMENT-PLAN.md) · [Data migration](DATA-MIGRATION-PLAN.md) · [Acceptance](OFFLINE-ACCEPTANCE-CRITERIA.md) · [Phase 0 audit](PHASE-0-AUDIT.md) |
@@ -51,12 +51,12 @@ The Phase 0 estimate (10–15 days) grows by the approved additions: read-only p
 | Prerequisite checker | Implemented, self-test 46/46 PASS; **client notebook run NOT TESTED** |
 | Pinned versions | Exist upstream (tags + release binaries verified); **digests NOT TESTED** (Docker Hub blocked in the sandbox) |
 | Supabase compatibility | PASS with version-exact substitute builds (D01–D15, C01–C16, unchanged UI end-to-end); schema identical to the Production schema dump; **upstream images NOT TESTED** |
-| S1 Ollama via `host.docker.internal` | **NOT TESTED — hard gate open** (Ollama Host guard accepts `host.docker.internal`; Linux-engine negative control shows dependence on Docker Desktop forwarding) |
-| Resources | Stack ≈ 230 MiB peak measured; Ollama/Windows NOT TESTED |
+| S1 Ollama via `host.docker.internal` | **HISTORICAL / SUPERSEDED** — original native-Windows-Ollama path. ADR-002 replaces it with Docker-internal `http://ollama:11434`; Docker-only inference is validated on the client notebook. |
+| Resources | **VALIDATED** — Docker / WSL2 cap 8 GB; full stack observed about 6.1 GiB with `qwen3.5:4b` loaded; Ollama about 5.8 GiB during inference |
 | Persistence | PASS on Linux Docker Engine (stop/down/down -v/SIGKILL); Docker Desktop NOT TESTED |
 | Offline inventory | Complete; sizes/digests produced by the export script |
 
-**To close Phase 2:** run `Test-TomYum-OfflinePrerequisites`, `Export-/Import-TomYum-OfflineImages` and `Invoke-TomYum-Phase2Spike` on the client notebook (and a preparation machine), then review S1 (approval A-9).
+**Historical Phase 2 gate (superseded/closed):** the original S1 host-bridge gate is no longer required. Final client-notebook validation is recorded in ADR-002 and the current acceptance criteria.
 
 ## 3. Phases
 
@@ -72,23 +72,23 @@ The Phase 0 estimate (10–15 days) grows by the approved additions: read-only p
 | 2.4 | Verify and pull pinned images; record digests; `docker save` to release staging | Digest list |
 | 2.5 | `deploy/offline/compose.yaml` with `db`, `auth`, `migrate`, `rest`, `gateway`; `90-tybc-roles.sh`; nginx template; offline secrets generator; migrate runner | Compose foundation |
 | 2.6 | Fresh install applies the 10 migrations; schema parity against `schema.sql` of the existing production backup (no Cloud access) | Empty RC-10 diff |
-| 2.7 | **Spike S1** (client notebook): a container reaches loopback-bound native Ollama via `host.docker.internal:11434`; Ollama Host-header guard accepts it | S1 report |
+| 2.7 | **Historical Spike S1**: container → native Windows Ollama through `host.docker.internal:11434` | Superseded by ADR-002 Docker-only Ollama validation |
 | 2.8 | **Spike S2**: `supabase-js` (server client, admin client, `getClaims`) against the gateway with a synthetic user on a throwaway volume; RLS select as `authenticated`; service-role write | S2 report |
 
-**Gate G2:** RC-10 empty; S1 PASS (or owner decision on the alternatives in ADR §5 — never `0.0.0.0`); S2 PASS; no published ports; repository gates unchanged.
-**Phase 2 outcome (2026-10-19):** done — 2.1 branch, 2.2 checker (self-test), 2.5 compose foundation, 2.6 fresh install + schema parity with the backup's `schema.sql` (identical, incl. grants), 2.8 S2 (sandbox, version-exact substitute images); **NOT TESTED** — 2.3 notebook run, 2.4 upstream digests, upstream-image repeat of 2.5/2.6/2.8, 2.7 S1 — pending a Windows run (PHASE-2-SPIKE-RESULTS.md §11).
+**Historical Gate G2:** originally required S1 PASS for native Windows Ollama. This condition is superseded by ADR-002; the current gate is Docker-internal Ollama validation plus the current security/acceptance suite.
+**Phase 2 historical outcome (2026-10-19):** the original run left Windows/native-Ollama S1 open. **Resolved 2026-10-20:** ADR-002 adopted Docker Compose Ollama and the client notebook passed Docker-only connectivity, inference, offline operation, resource, and optional-AI checks.
 **Rollback:** delete branch work and throwaway volumes; nothing outside the branch changed.
 
 ### Phase 3 — Application container
 
 **Goal:** the unchanged application runs in a container against the local stack, with no build-time environment coupling and no Internet dependency.
 
-**Proposed split after Phase 2:** **3a** = tasks 3.1–3.6 (S1-independent, branch-local, Vercel-neutral) plus applying Phase 2 findings F1–F13 to the deployment plan, data migration plan and acceptance criteria; **3b** = Local AI wiring/validation through `host.docker.internal` (part of 3.7), only after S1 PASS. Phase 2 evidence for 3.3/3.4: the production build must use **Turbopack** (a webpack build drops Tailwind, F8); a Turbopack build with `next/font/local` succeeded with no egress (F9); the image gate must look for the Cloud project ref, `restaurant-stock-rho` and font hosts rather than generic `supabase.co`/`api.openai.com` strings that live inside libraries (F7).
+**Historical Phase 3 split (superseded by ADR-002):** 3a covered the S1-independent work; the original 3b `host.docker.internal` Local AI path was replaced by Docker-internal Ollama at `http://ollama:11434`.
 
 | # | Task | Output |
 |---|---|---|
 | 3.1 | Runtime Supabase configuration: `TYBC_SUPABASE_URL` / `TYBC_SUPABASE_PUBLISHABLE_KEY` with fallback to `NEXT_PUBLIC_*` in `server.ts`, `proxy.ts`, `admin.ts`; fail-fast error; unit tests | Code + tests |
-| 3.2 | Ollama allowlist (ADR §5) incl. port rule if O-2 approved; full accept/reject matrix tests | Code + tests |
+| 3.2 | Ollama allowlist per ADR-002 §4: loopback remains valid for non-container development; offline-container mode permits only exact `http://ollama:11434`; reject LAN/public hosts, alternate ports, credentials and non-root paths | Code + tests — validated |
 | 3.3 | Conditional `output: "standalone"` (`TYBC_BUILD_TARGET=docker`); multi-stage Dockerfile; `.dockerignore`; image gate script | Image `tybc-app` |
 | 3.4 | Local fonts (`next/font/local`, same CSS variables, OFL licences); screenshot parity at 400/768/1024/1440 | Fonts + screenshots |
 | 3.5 | Confirm Cloud AI degrades cleanly with `OPENAI_*` unset; change only if it does not | Note or small fix |
@@ -160,7 +160,7 @@ Runbook: data plan §7.2. Approvals required on the day: **A-5** (date, freeze w
 |---|---|---|---|
 | A-1 | Start Phase 2 (this document set) — **approved** | P1 → P2 | Owner |
 | A-2 | Owner installs/enables Docker Desktop, WSL2, BIOS virtualization on the notebook if the audit reports FAIL — **approved**, after the read-only check reports the exact deficiency; BIOS never changed automatically | P2 | Owner (admin) |
-| A-9 | On-site run of the prerequisite checker and the Phase 2 runner on the client notebook (or linking the notebook to a session) to close S1 and the Windows NOT TESTED items | P2 | Owner |
+| A-9 | Client-notebook Local AI validation — **Completed 2026-10-20**: Docker Compose Ollama healthy; no Windows listener on `11434`; app reached `ollama:11434`; `qwen3.5:4b` inference succeeded | P2 / ADR-002 | Owner + Developer |
 | A-10 | Vercel Preview handling before any push of `feat/offline-docker-v1` (Ignored Build Step or confirmed Preview environment) | before any push | Owner |
 | A-3 | Read-only Cloud extraction for REH-2 | P4 | Owner |
 | A-4 | Apply recommended `.wslconfig` and Docker Desktop settings (start at sign-in, auto-update off) | P5/P6 | Owner (operator) |
@@ -174,14 +174,14 @@ Runbook: data plan §7.2. Approvals required on the day: **A-5** (date, freeze w
 | ID | Question | Recommendation | Needed by |
 |---|---|---|---|
 | O-1 | Docker Desktop licence: is the business within Docker's free-use limits (small business)? | **Resolved: `DOCKER_DESKTOP_LICENSE_ELIGIBILITY=CONFIRMED`** (recorded in `deploy/offline/decisions.env`, no figures) | — |
-| O-2 | Pin Ollama port to `11434` in the allowlist? | **Resolved: approved** — targets exactly `http://127.0.0.1:11434`, `http://[::1]:11434`, `http://host.docker.internal:11434` | — |
+| O-2 | Ollama destination rule | **Resolved by ADR-002** — offline-container mode permits exactly `http://ollama:11434`; loopback remains available for non-container development | — |
 | O-3 | Vercel after cutover: protection only / archive banner build / remove production domain | Protection only (no code change); banner optional | Before P7 |
 | O-4 | USB encryption: BitLocker To Go (needs a supporting Windows edition) or 7-Zip AES-256 | Decide from the prerequisite report (P01 edition) | Before P5.2 |
 | O-5 | Daily backup time and weekly USB owner | 23:30; owner every Monday | Before P5.1 |
 | O-6 | Clock thresholds and who may override | Warn 5 s, block 60 s; override by OWNER only, logged | Before P5.5 |
 | O-7 | Branch/release: merge to `main` before or after cutover (`main` may auto-deploy to Vercel Production) | Keep on `feat/offline-docker-v1` until cutover; tag `v1.3.0` at cutover | Before P7 |
 | O-13 | Exact nginx gateway image tag (official vs unprivileged alpine) | Choose an exact version tag on the preparation machine; the export script refuses floating tags | Before P2 close |
-| O-14 | S1 fallback if Docker Desktop does not reach loopback Ollama (options A–D in PHASE-2-SPIKE-RESULTS.md §7) | Decide only if S1 fails | After S1 |
+| O-14 | S1 fallback if Docker Desktop cannot reach native Windows Ollama | **Resolved / no longer applicable** — native Windows Ollama is not part of the final runtime | ADR-002 |
 | O-8 | Cutover date and freeze window | Low-activity day, ~3 h window | After G6 |
 | O-9 | Off-site custodian of the second USB drive | Owner | Before P6 |
 | O-10 | Exclude `auth.audit_log_entries` from the live migration (kept in archive dump) | Exclude | Before P4.1 |
@@ -192,7 +192,7 @@ Runbook: data plan §7.2. Approvals required on the day: **A-5** (date, freeze w
 
 | Risk | Earliest signal | Phase |
 |---|---|---|
-| R1 / R19 Ollama unreachable from container | Spike S1 on the notebook (still open) | P2 |
+| R1 / R19 Ollama unreachable from container | **Closed for final architecture** — app reaches Docker service `ollama:11434`; Docker-only inference validated with native Windows Ollama stopped | ADR-002 / AC-AI-05 |
 | R6 Pinned image/version unavailable or Cloud upgraded | Task 2.4 / data plan step 1 | P2, P7 |
 | R5 Reconciliation mismatch | REH-1/REH-2 | P4 |
 | R2/R3 Data loss on the notebook | AC-RST-03, operator training | P5–P6 |

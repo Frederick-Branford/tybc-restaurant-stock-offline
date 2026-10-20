@@ -88,7 +88,7 @@ const KEEP_ALIVE_UNIT_SECONDS: Record<string, number> = {
 // Literal loopback addresses only. "localhost" is rejected: it depends on
 // name resolution and may resolve to ::1 while Ollama listens on 127.0.0.1.
 const LOOPBACK_HOSTNAMES = new Set(["127.0.0.1", "[::1]"]);
-const OFFLINE_CONTAINER_HOSTNAME = "host.docker.internal";
+const OFFLINE_CONTAINER_HOSTNAME = "ollama";
 const OLLAMA_DEFAULT_PORT = "11434";
 
 function isAllowedOllamaHost(

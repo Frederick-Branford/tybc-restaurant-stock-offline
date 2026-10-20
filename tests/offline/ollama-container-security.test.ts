@@ -7,40 +7,40 @@ const ENABLED_ENV = {
 } as const;
 
 describe("offline container Ollama security boundary", () => {
-  it("allows the exact Docker Desktop host bridge only in offline container mode", () => {
+  it("allows the exact Ollama Compose service only in offline container mode", () => {
     const result = readLocalAiConfig({
       ...ENABLED_ENV,
       TYBC_OFFLINE_CONTAINER: "true",
-      OLLAMA_BASE_URL: "http://host.docker.internal:11434",
+      OLLAMA_BASE_URL: "http://ollama:11434",
     });
 
     expect(result.ok).toBe(true);
 
     if (result.ok) {
       expect(result.config.baseUrl).toBe(
-        "http://host.docker.internal:11434",
+        "http://ollama:11434",
       );
 
       expect(result.config.chatUrl).toBe(
-        "http://host.docker.internal:11434/api/chat",
+        "http://ollama:11434/api/chat",
       );
     }
   });
 
   it.each([
     {
-      name: "host bridge without offline container flag",
+      name: "Ollama service without offline container flag",
       env: {
         ...ENABLED_ENV,
-        OLLAMA_BASE_URL: "http://host.docker.internal:11434",
+        OLLAMA_BASE_URL: "http://ollama:11434",
       },
     },
     {
-      name: "host bridge on the wrong port",
+      name: "Ollama service on the wrong port",
       env: {
         ...ENABLED_ENV,
         TYBC_OFFLINE_CONTAINER: "true",
-        OLLAMA_BASE_URL: "http://host.docker.internal:11435",
+        OLLAMA_BASE_URL: "http://ollama:11435",
       },
     },
     {

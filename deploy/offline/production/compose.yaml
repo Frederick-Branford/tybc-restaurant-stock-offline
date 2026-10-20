@@ -166,9 +166,30 @@ services:
         limits:
           memory: 32m
 
+  ollama:
+    <<: *hardening
+    image: ollama/ollama:0.40.4
+    pull_policy: never
+    restart: unless-stopped
+    volumes:
+      - tybc_ollama_data:/root/.ollama
+    networks:
+      - tybc_backend
+    healthcheck:
+      test:
+        - CMD
+        - ollama
+        - list
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    deploy:
+      resources:
+        limits:
+          memory: 6500m
   app:
     <<: *hardening
-    image: ${TYBC_IMG_APP:-tybc-stock-app:phase3b-part2}
+    image: ${TYBC_IMG_APP:-tybc-stock-app:ollama-compose-v1}
     restart: unless-stopped
     depends_on:
       gateway:
@@ -180,16 +201,14 @@ services:
 
       AI_LOCAL_ENABLED: "true"
       TYBC_OFFLINE_CONTAINER: "true"
-      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      OLLAMA_BASE_URL: http://ollama:11434
       OLLAMA_MODEL: qwen3.5:4b
       OLLAMA_TIMEOUT_MS: "120000"
-      OLLAMA_KEEP_ALIVE: 10m
+      OLLAMA_KEEP_ALIVE: 2m
 
       TZ: Asia/Bangkok
     ports:
       - "127.0.0.1:3100:3000"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     networks:
       - tybc_backend
       - tybc_edge
@@ -220,3 +239,7 @@ volumes:
   tybc_db_data:
     external: true
     name: ${TYBC_DB_VOLUME:-tybc_db_data}
+
+  tybc_ollama_data:
+    external: true
+    name: ${TYBC_OLLAMA_VOLUME:-tybc_ollama_data}
